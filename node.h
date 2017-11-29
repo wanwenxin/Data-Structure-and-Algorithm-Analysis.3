@@ -1,5 +1,4 @@
-#pragma once
-#define N 26                //叶子总数,即需编码字符的个数  
+#define N 97                //叶子总数,即需编码字符的个数(95个可显示字符+2个‘\r’‘\n’)  
 #define M 2*N-1             //节点总数  
 
 typedef struct HuffmanTree//用于存储Huffman树中的节点信息  
