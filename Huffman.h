@@ -1,10 +1,9 @@
+#pragma once
 #include"node.h"
 #include<stdio.h> 
 #include<cstdlib>
 #include<fstream>
 #include<iostream>
-#define N 26                //叶子总数,即需编码字符的个数  
-#define M 2*N-1             //节点总数  
 #define maxval 10000        //最大权值  
 #define maxsize 1000        //数组大小的最大值  
 #define maxlongth 1000 
@@ -16,18 +15,20 @@ class Huffman
 {
 public:
 	char temp[maxlongth];           //暂存读入字符串
+	char text[maxlongth];      //存入读取文件的全部内容
 	char binarycode[maxlongth];     //存放编码好的二进制串
 	char decode_ch[maxlongth];      //存放翻译好的字符串
-	char temp_ch[M];        //标记读入huffman文件的字符
-	int temp_wight[M];      //统计读入huffman文件的字符对应权值
+	char text_ch[M];        //标记读入huffman文件的字符
+	int text_wight[M];      //统计读入huffman文件的字符对应权值
 	HuffmanTree tree[M];    //huffman树
 	CodeType code[N];       //huffman编码表
 public:
 	//  Huffman();
 	// ~Huffman();
 	void initialize(char temp[], char temp_ch[], int temp_wight[]);       //初始化temp_ch[N] temp_wight[N];统计huffman树文件的各字符权重
-	void HFfile_read(char temp[]);                            //从huffman文件中读取数据,存入temp[]
-	void infile_read(char temp[]);                            //从源文件中读取数据,存入temp[]
+	void HFfile_read(char temp[], char text[]);                           //从huffman文件中读取数据,存入temp[]
+	void infile_read(char temp[], char text[]);                           //从源文件中读取数据,存入temp[]
+	void find_sort(char temp[], char text[]);                             //将读入的temp存入text结尾
 
 	void CreateHuffmanTree(HuffmanTree tree[], char temp_ch[], int temp_wight[]);     //创建Huffman树  
 	void HuffmanCode(CodeType code[], HuffmanTree tree[]);          //根据Huffman+1树求出Huffman编码存储在code数组中  
@@ -35,36 +36,86 @@ public:
 	void decode(HuffmanTree tree[], char temp[], char decode_ch[]); //将“01”字符串str进行译码，直接输出  
 };
 
-void Huffman::HFfile_read(char temp[])   //读取huffman文件到缓冲区
+void Huffman::find_sort(char temp[], char text[])
 {
+	int flag = 0;
+	int cur_temp = 0, cur_text = 0;
+	for (int i = 0;i < maxlongth;i++)
+	{
+		cur_text = i;
+		if (text[cur_text] == '\0')   //找到目标
+		{
+			if(cur_text!=0)  //不是首句
+			{
+				text[cur_text] = '\r';
+				cur_text++;
+				text[cur_text] = '\n';
+				cur_text++;
+			}
+			flag = 1;
+			while(temp[cur_temp] != '\0')  //循环导入
+			{
+				text[cur_text] = temp[cur_temp];
+				cur_temp++, cur_text++;
+			}
+			text[cur_text] = '\0';     //句尾加上终止标志
+		}
+		if (flag == 1) break;   //完成读入，跳出循环
+	}
+
+}
+
+void Huffman::HFfile_read(char temp[], char text[])   //读取huffman文件到缓冲区
+{
+	text[0] = '\0';
 	HFfile.seekg(0, ios::beg);
-	HFfile.get(temp, 1000);   //读入当前行内容
+	while (!HFfile.eof())
+	{
+		HFfile.getline(temp, 1000, '\n');   //读入当前行内容
+		find_sort(temp, text);
+	}
 }
 
-void Huffman::infile_read(char temp[])   //读取源文件到缓冲区
+void Huffman::infile_read(char temp[], char text[])   //读取源文件到缓冲区
 {
+	text[0] ='\0';
 	infile.seekg(0, ios::beg);
-	infile.get(temp, 1000);   //读入当前行内容
+	while (!infile.eof())
+	{
+		infile.getline(temp, 1000, '\n');   //读入当前行内容
+		find_sort(temp, text);
+	}
 }
 
-void Huffman::initialize(char temp[], char temp_ch[], int temp_wight[])  //将huffman树M个结点初始化,weight全部置0
+void Huffman::initialize(char text[], char text_ch[], int text_wight[])  //将huffman树M个结点初始化,weight全部置0
 {
-	for (int i = 0; i < N;i++)   //c[0~n-1]，ch='a'~'z'
+	for (int i = 0; i < N-2;i++)   //读入所有可显示字符
 	{
-		temp_ch[i] = i + 'a';
-		temp_wight[i] = 0;
-		cout << temp_ch[i] << temp_wight[i] << endl;
+		text_ch[i] = i + ' ';
+		text_wight[i] = 0;
 	}
-	for (int i = N; i < M;i++)   //c[n~m-1]，ch='0'
+	text_ch[N - 2] = '\r';      
+	text_ch[N - 1] = '\n';      //最后读入组合换行符
+	for (int i = N; i < M;i++)  //后续节点位置空符
 	{
-		temp_ch[i] = '0';
-		temp_wight[i] = 0;
-		cout << temp_ch[i] << temp_wight[i] << endl;
+		text_ch[i] = '\0';
+		text_wight[i] = 0;
 	}
-	for (int i = 0; temp[i] != '\0';i++)
+	for (int i = 0; text[i] != '\0';i++)
 	{
-		int p = temp[i] - 'a';
-		temp_wight[p]+=1;          //对应权值加1
+		if (text[i] == '\r')
+		{
+			text_wight[N - 2]++;//‘\r’权重加一
+		}
+		else if (text[i] == '\n')
+		{
+			text_wight[N - 1]++;//‘\n’权重加一
+		}
+		else //text[i]为95个可显示字符
+		{
+			int p = text[i] - ' ';
+			text_wight[p]++;          //对应权值加1
+		}
 	}
 }
 
@@ -72,7 +123,7 @@ void Huffman::CreateHuffmanTree(HuffmanTree tree[], char temp_ch[], int temp_wig
 {
 	int i, j;
 	int p1, p2;          //p1,p2记录最小权值及次小权值节点在数组中的下标  
-	int min1, min2;    //min1记录最小权值，min2记录次小权值  
+	int min1, min2;      //min1记录最小权值，min2记录次小权值  
 
 	for (i = 0;i<M;i++)        //初始化Huffman树的M个节点  
 	{
@@ -148,29 +199,29 @@ void Huffman::HuffmanCode(CodeType code[], HuffmanTree tree[]) //根据Huffman�
 	}
 }
 
-void Huffman::incode(CodeType code[], char temp[], char binarycode[])//编码  
+void Huffman::incode(CodeType code[], char text[], char binarycode[])//编码  
 {
 	int i, k = 0;
-	for (i = 0;temp[i] != '\0';i++)
+	for (i = 0;text[i] != '\0';i++)
 	{
-		int j = 0, p;
-		while (code[j].ch != temp[i])
+		int j = 0, p = 0;
+		while (code[j].ch != text[i])
 			j++;
-		for (p = code[j].start;p<N;p++)
+		for (p = code[j].start;p < N;p++)
 			binarycode[k++] = code[j].bits[p];
 	}
 	binarycode[k] = '\0';//注意！  
 }
 
-void Huffman::decode(HuffmanTree tree[], char temp[], char decode_ch[])//译码  
+void Huffman::decode(HuffmanTree tree[], char text[], char decode_ch[])//译码  
 {
 	int cur = 0;
 	int j = 0, i = M - 1;//tree[M-1]为根节点，从根节点开始译码  
-	while (temp[j] != '\0')
+	while (text[j] != '\0')
 	{
-		if (temp[j] == '0')
+		if (text[j] == '0')
 			i = tree[i].Lchild;//走向左孩子  
-		else if (temp[j] == '1')
+		else if (text[j] == '1')
 			i = tree[i].Rchild;//走向右孩子  
 		if (tree[i].Rchild == -1)//tree[i]是叶子节点  
 		{
@@ -180,7 +231,9 @@ void Huffman::decode(HuffmanTree tree[], char temp[], char decode_ch[])//译码
 		}
 		j++;
 	}
-	if (tree[i].Lchild != -1 && temp[j] != '\0')//字符串读完，但未到叶子节点，则输入01码有错  
+	if (tree[i].Lchild != -1 && text[j] != '\0')//字符串读完，但未到叶子节点，则输入01码有错  	
+	{
 		printf("ERROR!");
+	}
 	decode_ch[cur] = '\0';
 }
